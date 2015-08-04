@@ -58,14 +58,15 @@ public class CTripTester {
 		RabbitMQPushMessage.push(testData);
 		LOGGER.info("**4** CTripTester.test001() completed pushing all the stubUrls to queue from testData");
 
+		LOGGER.info("**5** CTripTester.test001() start pulling messages from MQ for provided stubs");
 		HashMap<String, HashMap<String, ArrayList<ReviewData>>> actualData = RabbitMQPullMessage.pull();
-		LOGGER.info("**5** CTripTester.test001() completed pulling messages from MQ for provided stubs");
+		LOGGER.info("**6** CTripTester.test001() completed pulling messages from MQ for provided stubs");
 
 		HashMap<String, HashMap<String, ArrayList<ReviewData>>> expectedData = CtripExpectedDataFetch
-		        .getActualData(testData);
-		LOGGER.info("**6** CTripTester.test001() completed fetching data from actual webpage");
+		        .getExpectedData(testData);
+		LOGGER.info("**7** CTripTester.test001() completed fetching data from actual webpage");
 
-		LOGGER.info("**7** CTripTester.test001() starting comparison of expected data with actual data");
+		LOGGER.info("**8** CTripTester.test001() starting comparison of expected data with actual data");
 		CompareFunctions.compareData(actualData, expectedData);
 	}
 

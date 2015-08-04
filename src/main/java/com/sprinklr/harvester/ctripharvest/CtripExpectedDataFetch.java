@@ -10,10 +10,15 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.testng.Assert;
 
 import com.sprinklr.harvester.model.InitialData;
 import com.sprinklr.harvester.model.ReviewData;
@@ -27,60 +32,115 @@ import com.sprinklr.harvester.util.StaticUtils;
 public class CtripExpectedDataFetch {
 
 	public final static Logger LOGGER = Logger.getLogger(CtripExpectedDataFetch.class);
-	
-	public static HashMap<String, HashMap<String, ArrayList<ReviewData>>> getActualData(
-	        HashMap<Integer, InitialData> testData) {
+	private static WebDriver driver;
+	private final static String BROWSER = PropertyHandler.getProperties().getProperty("browser");
+	private static String givenDate = PropertyHandler.getProperties().getProperty("date");
+	private static Date givenMentionDate = StaticUtils.convertCtripStringToDate(givenDate);
 
-		LOGGER.info("CtripExpectedDataFetch - Inside get actual data method of class CtripExpectedDataFetch............");
+	public static WebDriver getHtmlDriver() {
+		HtmlUnitDriver driver = new HtmlUnitDriver();
+		driver.manage().timeouts().implicitlyWait(60, TimeUnit.SECONDS);
+		driver.manage().timeouts().pageLoadTimeout(200, TimeUnit.SECONDS);
+		driver.setJavascriptEnabled(true);
+		return driver;
+	}
+
+	public static WebDriver getFirefoxDriver() {
+		WebDriver driver = new FirefoxDriver();
+		driver.manage().timeouts().implicitlyWait(60, TimeUnit.SECONDS);
+		driver.manage().timeouts().pageLoadTimeout(200, TimeUnit.SECONDS);
+		driver.manage().window().maximize();
+		driver.manage().deleteAllCookies();
+		return driver;
+	}
+
+	public static HashMap<String, HashMap<String, ArrayList<ReviewData>>> getExpectedData(
+	        HashMap<Integer, InitialData> testData) {
+		if (BROWSER.equalsIgnoreCase("firefox")) {
+			driver = getFirefoxDriver();
+			return getDataFromCtripSites(testData);
+		} else if (BROWSER.equalsIgnoreCase("htmlunit")) {
+			driver = getHtmlDriver();
+			return getDataFromCtripSites(testData);
+		} else {
+			Assert.assertTrue(false, "No matching browser. Test Fail.");
+		}
+		return null;
+	}
+
+	/**
+	 * 
+	 * @param testData
+	 * @return
+	 */
+	public static HashMap<String, HashMap<String, ArrayList<ReviewData>>> getDataFromCtripSites(
+	        HashMap<Integer, InitialData> testData) {
+		LOGGER.info("CtripExpectedDataFetch - Inside get actual data method of class CtripExpectedDataFetch...");
 
 		HashMap<String, HashMap<String, ArrayList<ReviewData>>> expectedReviewDataPerStub = new HashMap<String, HashMap<String, ArrayList<ReviewData>>>();
-		WebDriver driver = new FirefoxDriver();
-
-		driver.manage().timeouts().implicitlyWait(60, TimeUnit.SECONDS);
-		driver.manage().window().maximize();
 
 		Set<Integer> endPointKeySet = testData.keySet();
 		Iterator<Integer> endPointIterator = endPointKeySet.iterator();
 		while (endPointIterator.hasNext()) {
+			ArrayList<String> commentsText = new ArrayList<String>();
+			ArrayList<String> mentionDatesText = new ArrayList<String>();
+			ArrayList<String> authorIDsText = new ArrayList<String>();
+			ArrayList<String> ratingsText = new ArrayList<String>();
+
 			HashMap<String, ArrayList<ReviewData>> reviewContent = new HashMap<String, ArrayList<ReviewData>>();
 
 			Integer stubID = endPointIterator.next();
 			String endPointURL = testData.get(stubID).getStubEndpoint();
+			System.out.println("==> Endpoint " + endPointURL);
+			int pageNumber = 1;
 
-			driver.get(endPointURL);
+			openBrowser(endPointURL);
 
-			String sort_dropdown = "//select[contains(@id,'selCommentSortType')] | //select[contains(@class,'select_sort')]";
+			selectDropdown();
 
-			Select dropdown = new Select(driver.findElement(By.xpath(sort_dropdown)));
-			dropdown.selectByIndex(1);
-			StaticUtils.pause(5);
+			NEXTSTUB: while (true) {
+				List<WebElement> comments = driver.findElements(By.xpath(PropertyHandler.getSourceProperties()
+				        .getProperty("content_xpath")));
+				List<WebElement> mentionDates = driver.findElements(By.xpath(PropertyHandler.getSourceProperties()
+				        .getProperty("mentionTime_xpath")));
+				List<WebElement> authorIDs = driver.findElements(By.xpath(PropertyHandler.getSourceProperties()
+				        .getProperty("author_xpath")));
+				List<WebElement> ratings = driver.findElements(By.xpath(PropertyHandler.getSourceProperties()
+				        .getProperty("rating_xpath")));
 
-			List<WebElement> comments = driver.findElements(By.xpath(PropertyHandler.getSourceProperties().getProperty(
-			        "content_xpath")));
-			ArrayList<String> commentsText = new ArrayList<String>();
-			for (int i = 0; i < comments.size(); i++) {
-				commentsText.add(comments.get(i).getText());
-			}
+				for (int i = 0; i < comments.size(); i++) {
+					Date date = StaticUtils.convertCtripStringToDate(mentionDates.get(i).getText());
+					if (date.before(givenMentionDate)) {
+						break NEXTSTUB;
+					}
 
-			List<WebElement> mentionDates = driver.findElements(By.xpath(PropertyHandler.getSourceProperties()
-			        .getProperty("mentionTime_xpath")));
-			ArrayList<String> mentionDatesText = new ArrayList<String>();
-			for (int i = 0; i < mentionDates.size(); i++) {
-				mentionDatesText.add(mentionDates.get(i).getText());
-			}
+					System.out.println("Author: " + authorIDs.get(i).getText() + " ===  Comments: "
+					        + authorIDs.get(i).getText());
+					commentsText.add(comments.get(i).getText());
+					mentionDatesText.add(mentionDates.get(i).getText());
+					authorIDsText.add(authorIDs.get(i).getText());
+					ratingsText.add(ratings.get(i).getText());
+				}
 
-			List<WebElement> authorIDs = driver.findElements(By.xpath(PropertyHandler.getSourceProperties()
-			        .getProperty("author_xpath")));
-			ArrayList<String> authorIDsText = new ArrayList<String>();
-			for (int i = 0; i < authorIDs.size(); i++) {
-				authorIDsText.add(authorIDs.get(i).getText());
-			}
-
-			List<WebElement> ratings = driver.findElements(By.xpath(PropertyHandler.getSourceProperties().getProperty(
-			        "rating_xpath")));
-			ArrayList<String> ratingsText = new ArrayList<String>();
-			for (int i = 0; i < ratings.size(); i++) {
-				ratingsText.add(ratings.get(i).getText());
+				try { // move to next page
+					String next_page = "//a[contains(@class,'c_down')]";
+					if (endPointURL.toLowerCase().contains("ajax")) {
+						endPointURL = endPointURL.replaceAll("currentPage=" + pageNumber, "currentPage="
+						        + (pageNumber + 1));
+						LOGGER.info("New endpoint is ==> " + endPointURL);
+						pageNumber++;
+						openBrowser(endPointURL);
+						continue;
+					} else {
+						WebElement button = (new WebDriverWait(driver, 200)).until(ExpectedConditions
+						        .presenceOfElementLocated(By.xpath(next_page)));
+						button.click();
+						StaticUtils.pause(5);
+						continue;
+					}
+				} catch (Exception e) {
+					break;
+				}
 			}
 
 			System.out.println("Comments Size: " + commentsText.size());
@@ -88,19 +148,12 @@ public class CtripExpectedDataFetch {
 			System.out.println("Author Size: " + authorIDsText.size());
 			System.out.println("Rating Size: " + ratingsText.size());
 
-			String givenDate = PropertyHandler.getProperties().getProperty("date");
-			Date givenMentionDate = StaticUtils.convertCtripStringToDate(givenDate);
-
 			for (int i = 0; i < commentsText.size(); i++) {
-				Date date = StaticUtils.convertCtripStringToDate(mentionDatesText.get(i));
-				if (date.before(givenMentionDate)) {
-					break;
-				}
 
 				ReviewData rdObject = new ReviewData();
 				rdObject.setHarvesterID(stubID.toString());
 				rdObject.setAuthorId(authorIDsText.get(i));
-				rdObject.setComment(commentsText.get(i));
+				rdObject.setComment(commentsText.get(i).replaceAll("  +", " "));
 				rdObject.setMentionedDate(mentionDatesText.get(i));
 				rdObject.setRatings(ratingsText.get(i));
 
@@ -118,7 +171,37 @@ public class CtripExpectedDataFetch {
 			}
 			expectedReviewDataPerStub.put(stubID.toString(), reviewContent);
 		}
-		driver.close();
 		return expectedReviewDataPerStub;
+	}
+
+	/**
+	 * 
+	 * @param browser
+	 * @param endPointURL
+	 */
+	public static void openBrowser(String endPointURL) {
+		try {
+			LOGGER.info("Trying to load the page. It will timeout in 200 secs. ==> " + endPointURL);
+			driver.navigate().to(endPointURL);
+		} catch (Exception e) {
+			StaticUtils.pause(5);
+			if (BROWSER.equalsIgnoreCase("firefox")) {
+				JavascriptExecutor js = (JavascriptExecutor) driver;
+				js.executeScript("return window.stop()");
+			}
+		}
+	}
+
+	/**
+	 * 
+	 */
+	public static void selectDropdown() {
+		String sort_dropdown = "//select[contains(@id,'selCommentSortType')] | //select[contains(@class,'select_sort')]";
+		WebElement elem = (new WebDriverWait(driver, 200)).until(ExpectedConditions.presenceOfElementLocated(By
+		        .xpath(sort_dropdown)));
+
+		Select dropdown = new Select(elem);
+		dropdown.selectByIndex(1);
+		StaticUtils.pause(10);
 	}
 }

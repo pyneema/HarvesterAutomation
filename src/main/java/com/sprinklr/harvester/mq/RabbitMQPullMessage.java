@@ -13,6 +13,7 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.QueueingConsumer;
 import com.sprinklr.harvester.model.ReviewData;
 import com.sprinklr.harvester.util.PropertyHandler;
+import com.sprinklr.harvester.util.StaticUtils;
 //import org.json.JSONObject;
 //import org.json.parser.JSONParser;
 
@@ -43,23 +44,14 @@ public class RabbitMQPullMessage {
 
 			for (int i = 0; i < jsonEntries.length(); i++) {
 				ReviewData rdObject = new ReviewData();
-
 				rdObject.setHarvesterID(record.get("harvesterId").toString());
-
 				JSONObject entry = (JSONObject) jsonEntries.get(i);
-
 				JSONObject author = (JSONObject) entry.get("author");
-
 				rdObject.setAuthorId(author.get("authorId").toString().trim());
-
 				JSONObject document = (JSONObject) entry.get("document");
-
 				rdObject.setMentionedDate(document.get("mentionTime").toString().trim());
-
 				rdObject.setRatings(document.get("overallRating").toString().trim());
-
-				rdObject.setComment(document.get("content").toString().trim());
-
+				rdObject.setComment(document.get("content").toString().trim().replaceAll("  +", " "));
 				rdObject.setHarvesterID(record.get("harvesterId").toString());
 
 				System.out.println(rdObject.toString());
@@ -113,22 +105,23 @@ public class RabbitMQPullMessage {
 
 		HashMap<String, HashMap<String, ArrayList<ReviewData>>> actualReviewDataPerStub = new HashMap<String, HashMap<String, ArrayList<ReviewData>>>();
 		Integer count = 0;
+		Connection connection = null;
+		Channel channel = null;
 
 		try {
-
 			ConnectionFactory factory = new ConnectionFactory();
 			factory.setHost(PropertyHandler.getProperties().getProperty("mqhost"));
-			Connection connection = factory.newConnection();
-			Channel channel = connection.createChannel();
-			
+			connection = factory.newConnection();
+			channel = connection.createChannel();
+
 			channel.queueDeclare(QUEUE_NAME, true, false, false, null);
 			QueueingConsumer consumer = new QueueingConsumer(channel);
 			channel.basicConsume(QUEUE_NAME, true, consumer);
 
 			while (true) {
 				count++;
-				if (count < 10) {
-					QueueingConsumer.Delivery delivery = consumer.nextDelivery(10000);
+				if (count < 4) {
+					QueueingConsumer.Delivery delivery = consumer.nextDelivery(50000);
 					if (delivery == null) {
 						continue;
 					}
@@ -137,7 +130,6 @@ public class RabbitMQPullMessage {
 					String stubID = getHarvesterID(message);
 					HashMap<String, ArrayList<ReviewData>> actualDataByAuthorID = writeJsonToHashmap(message);
 					actualReviewDataPerStub.put(stubID, actualDataByAuthorID);
-					Thread.sleep(5000);
 				} else {
 					break;
 				}
@@ -145,6 +137,21 @@ public class RabbitMQPullMessage {
 			System.out.println("++++++++++++++++++++++++out of the loop++++++++++++++++++++++++++++++");
 		} catch (Exception ex) {
 			ex.printStackTrace();
+		} finally {
+			if (channel != null) {
+				try {
+					channel.close();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			if (connection != null) {
+				try {
+					connection.close();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
 		}
 		return actualReviewDataPerStub;
 	}

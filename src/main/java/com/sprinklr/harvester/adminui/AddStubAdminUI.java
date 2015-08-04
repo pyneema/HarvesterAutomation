@@ -39,7 +39,7 @@ public class AddStubAdminUI {
 				LOGGER.warn("AddStubAdminUI.addStubInAdminUI() stub already exists in DB! " + nextURL);
 				continue;
 			}
-			stubUrl.add(urlListIterator.next());
+			stubUrl.add(nextURL);
 		}
 
 		if (stubUrl.size() <= 0) {

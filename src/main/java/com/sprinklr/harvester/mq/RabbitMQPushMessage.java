@@ -47,6 +47,7 @@ public class RabbitMQPushMessage {
 			Integer stubId;
 			while (testDataKey.hasNext()) {
 				stubId = testDataKey.next();
+				
 				String message = getJsonCmd(stubId);
 				LOGGER.info("push() pushing Json message to MQ : " + message);
 				channel.basicPublish("", QUEUE_NAME, null, message.getBytes());

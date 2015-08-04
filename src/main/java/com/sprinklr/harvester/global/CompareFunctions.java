@@ -14,20 +14,30 @@ public class CompareFunctions {
 		System.out.println("Actual Data Key sets = " + aData.size() + " - " + aData.keySet().toString());
 		System.out.println("Expected Data Key sets = " + eData.size() + " - " + eData.keySet().toString());
 
+		Assert.assertEquals(aData.keySet().size(), eData.keySet().size(), "StubID size does not match: Actual Stub IDs = "
+		        + aData.keySet().toString() + " <====> Expected Stub IDs = " + eData.keySet().toString());
 		for (String expectedStubid : eData.keySet()) {
-			Assert.assertTrue(aData.containsKey(expectedStubid), "Stub ID does not match: " + expectedStubid);
+			Assert.assertTrue(aData.containsKey(expectedStubid), "Stub ID does not found: " + expectedStubid + " in "
+			        + aData.keySet().toString());
 
 			HashMap<String, ArrayList<ReviewData>> actualData = aData.get(expectedStubid);
 			HashMap<String, ArrayList<ReviewData>> expectedData = eData.get(expectedStubid);
 
+			Assert.assertEquals(actualData.keySet().size(), expectedData.keySet().size(),
+			        "Authors size does not match: Actual Author IDs = " + actualData.keySet().toString()
+			                + " <====>- Expected Author IDs = " + expectedData.keySet().toString());
 			for (String expectedAuthor : expectedData.keySet()) {
 				System.out.println("Expected Author ID = " + expectedAuthor);
 				Assert.assertTrue(actualData.containsKey(expectedAuthor),
-				        "Author ID does not found in actual data list: " + expectedAuthor);
+				        "Author ID does not found in actual data list: " + expectedAuthor + " in "
+				                + actualData.keySet().toString());
 
 				ArrayList<ReviewData> actualReviewList = actualData.get(expectedAuthor);
 				ArrayList<ReviewData> expectedReviewList = expectedData.get(expectedAuthor);
 
+				Assert.assertEquals(actualReviewList.size(), expectedReviewList.size(),
+				        "Review size does not match: Actual reviews per Author = " + actualReviewList.toString()
+				                + " <====> Expected Reviews per Author = " + expectedReviewList.toString());
 				for (ReviewData expectedReviewData : expectedReviewList) {
 					boolean flag = false;
 					ReviewData reviewData = null;
@@ -46,12 +56,15 @@ public class CompareFunctions {
 						System.out.println("Expected Review Data Comments = " + expectedReviewData.getComment());
 						System.out.println("Actual Review Data Comments = " + actualReviewData.getComment());
 
-						if (expectedReviewData.getAuthorId().equalsIgnoreCase(actualReviewData.getAuthorId())
-						        && (expectedReviewData.getComment().contains(actualReviewData.getComment()) || actualReviewData
-						                .getComment().contains(expectedReviewData.getComment()))) {
+						if (expectedReviewData.getAuthorId().trim()
+						        .equalsIgnoreCase(actualReviewData.getAuthorId().trim())
+						        && (expectedReviewData.getComment().trim()
+						                .contains(actualReviewData.getComment().trim()) || actualReviewData
+						                .getComment().trim().contains(expectedReviewData.getComment().trim()))) {
 							System.out
 							        .println("===============================================================================");
 							flag = true;
+							break;
 						}
 					}
 					Assert.assertTrue(flag,
