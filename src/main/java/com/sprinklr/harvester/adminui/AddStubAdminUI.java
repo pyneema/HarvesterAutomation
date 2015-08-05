@@ -22,10 +22,10 @@ import com.sprinklr.harvester.util.StaticUtils;
  *
  */
 public class AddStubAdminUI {
-	public final static Logger LOGGER = Logger.getLogger(AddStubAdminUI.class);
+	
+	public static final Logger LOGGER = Logger.getLogger(AddStubAdminUI.class);
 
 	public void addStubInAdminUI() {
-
 		LOGGER.info("AddStubAdminUI.addStubInAdminUI() Initialising the FirefoxDriver for adding new stub...");
 
 		ArrayList<String> stubUrl = new ArrayList<String>();
@@ -39,9 +39,12 @@ public class AddStubAdminUI {
 				LOGGER.warn("AddStubAdminUI.addStubInAdminUI() stub already exists in DB! " + nextURL);
 				continue;
 			}
-			stubUrl.add(nextURL);
+			stubUrl.add(nextURL); // stubs need to add to DB.
 		}
 
+		/*
+		 * Return if there is no URL to add into DB.
+		 */
 		if (stubUrl.size() <= 0) {
 			return;
 		}

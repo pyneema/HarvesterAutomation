@@ -9,10 +9,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.log4j.Logger;
 
 import com.sprinklr.harvester.model.InitialData;
-import com.sprinklr.harvester.test.CTripTester;
 
 /**
  * Reusable functions for accessing the DB data.
@@ -20,7 +20,7 @@ import com.sprinklr.harvester.test.CTripTester;
  */
 public class JdbcConnect {
 
-	public final static Logger LOGGER = Logger.getLogger(CTripTester.class);
+	public static final Logger LOGGER = Logger.getLogger(JdbcConnect.class);
 	public static PropertyHandler propHandler = new PropertyHandler();
 
 	public static Connection getDBConnection() {
@@ -99,23 +99,19 @@ public class JdbcConnect {
 			if (conn != null) {
 				try {
 					conn.close();
-					LOGGER.info("closing database connection...");
 				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 			if (stmt != null) {
 				try {
 					stmt.close();
 				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 			if (rs != null) {
 				try {
 					rs.close();
 				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 		}
@@ -125,6 +121,7 @@ public class JdbcConnect {
 
 	/**
 	 * Get the stub ID for the given URL.
+	 * 
 	 * @param stubURL
 	 * @return
 	 */
@@ -147,6 +144,25 @@ public class JdbcConnect {
 			}
 		} catch (Exception ex) {
 			ex.printStackTrace();
+		} finally {
+			if (conn != null) {
+				try {
+					conn.close();
+				} catch (Exception e) {
+				}
+			}
+			if (stmt != null) {
+				try {
+					stmt.close();
+				} catch (Exception e) {
+				}
+			}
+			if (rs != null) {
+				try {
+					rs.close();
+				} catch (Exception e) {
+				}
+			}
 		}
 		return 0;
 	}
@@ -194,23 +210,19 @@ public class JdbcConnect {
 			if (conn != null) {
 				try {
 					conn.close();
-					LOGGER.info("getHashMappedDBData() Closing DB connection");
 				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 			if (stmt != null) {
 				try {
 					stmt.close();
 				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 			if (rs != null) {
 				try {
 					rs.close();
 				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 		}
@@ -229,17 +241,26 @@ public class JdbcConnect {
 		try {
 			conn = getDBConnection();
 			stmt = conn.createStatement();
-			query = "SELECT ID, URL FROM HARVESTER WHERE URL='" + url + "'";
+			query = "SELECT DISTINCT(H.ID) AS ID FROM DOCUMENT D, HARVESTER H, RECORD R WHERE H.URL = '"
+			        + url
+			        + "' AND H.LAST_RECORD_ID IS NOT NULL AND R.ID = H.LAST_RECORD_ID AND H.STATUS NOT LIKE '%rejected%' AND H.ID = D.HARVESTER_ID ORDER BY H.ID DESC";
+
 			LOGGER.info("getHashMappedDBData() Quering : " + query);
 			rs = stmt.executeQuery(query);
 
-			while (rs.next()) {
+			InitialData initialData = new InitialData();
+			initialData.setStubEndpoint(stubEndPoint);
+			initialData.setStubURL(url);
+			if (rs.next()) {
 				int id = rs.getInt("ID");
-				InitialData initialData = new InitialData();
-				initialData.setStubEndpoint(stubEndPoint);
-				initialData.setStubURL(url);
 				initialData.setStubID(id);
+				initialData.setValidStub(true);
 				stubData.put(id, initialData);
+			} else {
+				int randomStubId = Integer.parseInt(RandomStringUtils.randomNumeric(2));
+				initialData.setStubID(randomStubId);
+				initialData.setValidStub(false);
+				stubData.put(randomStubId, initialData);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -247,23 +268,19 @@ public class JdbcConnect {
 			if (conn != null) {
 				try {
 					conn.close();
-					LOGGER.info("getHashMappedDBData() Closing DB connection");
 				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 			if (stmt != null) {
 				try {
 					stmt.close();
 				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 			if (rs != null) {
 				try {
 					rs.close();
 				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 		}

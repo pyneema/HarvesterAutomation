@@ -4,13 +4,14 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
+import org.apache.log4j.Logger;
 
 /**
- * Static reusable functions.
+ * General reusable functions.
  */
 public class StaticUtils {
+	
+	public static final Logger LOGGER = Logger.getLogger(StaticUtils.class);
 
 	/**
 	 * Sleep for seconds.

@@ -8,6 +8,7 @@ public class InitialData {
 	private int stubID;
 	private String stubURL;
 	private String stubEndpoint;
+	private boolean isValidStub = false;
 
 	public int getStubID() {
 		return stubID;
@@ -32,5 +33,13 @@ public class InitialData {
 	public void setStubEndpoint(String stubEndpoint) {
 		this.stubEndpoint = stubEndpoint;
 	}
+
+	public boolean isValidStub() {
+	    return isValidStub;
+    }
+
+	public void setValidStub(boolean isValidStub) {
+	    this.isValidStub = isValidStub;
+    }
 
 }

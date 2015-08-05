@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.log4j.Logger;
-import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -17,28 +17,40 @@ import com.sprinklr.harvester.ctripharvest.CtripExpectedDataFetch;
 import com.sprinklr.harvester.global.CompareFunctions;
 import com.sprinklr.harvester.model.InitialData;
 import com.sprinklr.harvester.model.ReviewData;
+import com.sprinklr.harvester.mq.RabbitMQFunctions;
 import com.sprinklr.harvester.mq.RabbitMQPullMessage;
 import com.sprinklr.harvester.mq.RabbitMQPushMessage;
+import com.sprinklr.harvester.util.BaseUtils;
 import com.sprinklr.harvester.util.JdbcConnect;
 import com.sprinklr.harvester.util.PropertyHandler;
 
 /**
- * 
+ * Test the CTrip harvester.
  *
  */
-public class CTripTester {
+public class CTripTester extends BaseUtils {
 
-	public final static Logger LOGGER = Logger.getLogger(CTripTester.class);
+	public static final Logger LOGGER = Logger.getLogger(CTripTester.class);
 
 	/**
 	 * Add all of the stubs that does not exists in DB. Add it through ADMIN UI.
 	 */
-	@BeforeClass
+	// @BeforeClass
 	public void addSutbsInDB() {
 		LOGGER.info("**1** CTripTester.addSutbsInDB() Initialising the testing process...");
 		AddStubAdminUI addStub = new AddStubAdminUI();
 		addStub.addStubInAdminUI();
 		LOGGER.info("**2** CTripTester.addSutbsInDB() completed adding stub/url from adminUI");
+	}
+
+	/**
+	 * Purge the push and pull queues.
+	 */
+	@BeforeMethod
+	public void cleanQueues() {
+		LOGGER.info("Purging the queues..");
+		RabbitMQFunctions.purgeQueue(PropertyHandler.getProperties().getProperty("push_queue"));
+		RabbitMQFunctions.purgeQueue(PropertyHandler.getProperties().getProperty("pull_queue"));
 	}
 
 	/**
@@ -72,6 +84,7 @@ public class CTripTester {
 
 	/**
 	 * CTrip test data provider.
+	 * 
 	 * @return
 	 */
 	@DataProvider(name = "ctripdata")

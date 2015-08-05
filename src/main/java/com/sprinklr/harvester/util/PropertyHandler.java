@@ -6,23 +6,34 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import org.apache.log4j.Logger;
+
 /**
  * Class to read properties files values
  */
 public class PropertyHandler {
+
+	public static final Logger LOGGER = Logger.getLogger(PropertyHandler.class);
+	public static Properties harvProperties = null;
+	public static Properties sourceProperties = null;
+
 	/**
 	 * Method to fetch configuration properties from qa-db.properties file
 	 * 
 	 * @return java.util.Properties
 	 */
 	public static Properties getProperties() {
-		Properties prop = new Properties();
+		if (harvProperties != null) {
+			return harvProperties;
+		} else {
+			harvProperties = new Properties();
+		}
+		LOGGER.info("**getProperties** - getting the properties from Harvester.properties");
 		String prop_file_name = System.getProperty("user.dir") + "\\conf\\Harvester.properties";
-
 		InputStream inputStream = null;
 		try {
 			inputStream = new FileInputStream(prop_file_name);
-			prop.load(inputStream);
+			harvProperties.load(inputStream);
 		} catch (FileNotFoundException fnfe) {
 			fnfe.printStackTrace();
 		} catch (IOException ioe) {
@@ -32,8 +43,7 @@ public class PropertyHandler {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
-		return prop;
+		return harvProperties;
 	}
 
 	/**
@@ -43,14 +53,20 @@ public class PropertyHandler {
 	 * @return java.util.Properties
 	 */
 	public static Properties getSourceProperties() {
-		Properties prop = new Properties();
+		if (sourceProperties != null) {
+			return sourceProperties;
+		} else {
+			sourceProperties = new Properties();
+		}
+
 		String source = PropertyHandler.getProperties().getProperty("source").toLowerCase();
+		LOGGER.info("**getSourceProperties** - getting the source properties ==> " + source);
 		String prop_file_name = System.getProperty("user.dir") + "\\src\\main\\resources\\" + source + "\\" + source
 		        + ".properties";
 		InputStream inputStream = null;
 		try {
 			inputStream = new FileInputStream(prop_file_name);
-			prop.load(inputStream);
+			sourceProperties.load(inputStream);
 		} catch (FileNotFoundException fnfe) {
 			fnfe.printStackTrace();
 		} catch (IOException ioe) {
@@ -60,8 +76,7 @@ public class PropertyHandler {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
-		return prop;
+		return sourceProperties;
 	}
 
 }

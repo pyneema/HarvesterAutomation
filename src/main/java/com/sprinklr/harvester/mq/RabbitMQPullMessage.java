@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;//JSONArray;
 
@@ -13,9 +14,6 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.QueueingConsumer;
 import com.sprinklr.harvester.model.ReviewData;
 import com.sprinklr.harvester.util.PropertyHandler;
-import com.sprinklr.harvester.util.StaticUtils;
-//import org.json.JSONObject;
-//import org.json.parser.JSONParser;
 
 /**
  * Rabbit MQ reusable function for pulling into queue.
@@ -23,7 +21,76 @@ import com.sprinklr.harvester.util.StaticUtils;
  */
 public class RabbitMQPullMessage {
 
-	public final static String QUEUE_NAME = PropertyHandler.getProperties().getProperty("pull_queue");
+	public static final Logger LOGGER = Logger.getLogger(RabbitMQPullMessage.class);
+
+	public static final String QUEUE_NAME = PropertyHandler.getProperties().getProperty("pull_queue");
+
+	public static final int MAX_RETRY = 5;
+
+	/**
+	 * Pull the rabbitMQ messages and parse that JSON message.
+	 * 
+	 * @return - Hashmaped data from the Rabbit MQ JOSON message.
+	 */
+	public static HashMap<String, HashMap<String, ArrayList<ReviewData>>> pull() {
+		LOGGER.info("**pull** - Pull all the messages from the queue.");
+		HashMap<String, HashMap<String, ArrayList<ReviewData>>> actualReviewDataPerStub = new HashMap<String, HashMap<String, ArrayList<ReviewData>>>();
+		Integer count = 0;
+		Connection connection = null;
+		Channel channel = null;
+
+		try {
+			ConnectionFactory factory = new ConnectionFactory();
+			factory.setHost(PropertyHandler.getProperties().getProperty("mqhost"));
+			connection = factory.newConnection();
+			channel = connection.createChannel();
+
+			channel.queueDeclare(QUEUE_NAME, true, false, false, null);
+			QueueingConsumer consumer = new QueueingConsumer(channel);
+			channel.basicConsume(QUEUE_NAME, true, consumer);
+
+			String message = "";
+			while (true) {
+				count++;
+				if (count < MAX_RETRY) {
+					QueueingConsumer.Delivery delivery = consumer.nextDelivery(80000);
+					if (delivery == null) {
+						continue;
+					}
+					message = new String(delivery.getBody());
+					LOGGER.info(" [x] Received ->> " + message);
+					if (message.contains("UnsupportedPagePatternException")) {
+						String stubID = getHarvesterID(message);
+						HashMap<String, ArrayList<ReviewData>> actualDataByAuthorID = writeJsonToHashmap(message);
+						actualReviewDataPerStub.put(stubID, actualDataByAuthorID);
+						continue;
+					}
+					String stubID = getHarvesterID(message);
+					HashMap<String, ArrayList<ReviewData>> actualDataByAuthorID = writeJsonToHashmap(message);
+					actualReviewDataPerStub.put(stubID, actualDataByAuthorID);
+					break;
+				} else {
+					break;
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		} finally {
+			if (channel != null) {
+				try {
+					channel.close();
+				} catch (Exception e) {
+				}
+			}
+			if (connection != null) {
+				try {
+					connection.close();
+				} catch (Exception e) {
+				}
+			}
+		}
+		return actualReviewDataPerStub;
+	}
 
 	/**
 	 * Method to read data in JSON Format & extract values out of it and returns
@@ -34,6 +101,7 @@ public class RabbitMQPullMessage {
 	 * @return HashMap<String,ArrayList<ReviewData>>
 	 */
 	public static HashMap<String, ArrayList<ReviewData>> writeJsonToHashmap(String message) {
+		LOGGER.info("**writeJsonToHashmap** - Writing JSON data into hashmap.");
 		HashMap<String, ArrayList<ReviewData>> reviewContent = new HashMap<String, ArrayList<ReviewData>>();
 
 		try {
@@ -54,7 +122,7 @@ public class RabbitMQPullMessage {
 				rdObject.setComment(document.get("content").toString().trim().replaceAll("  +", " "));
 				rdObject.setHarvesterID(record.get("harvesterId").toString());
 
-				System.out.println(rdObject.toString());
+				// System.out.println(rdObject.toString());
 
 				Set<String> reviewContentKeyset = reviewContent.keySet();
 				if (reviewContentKeyset.contains(rdObject.getAuthorId())) {
@@ -80,11 +148,11 @@ public class RabbitMQPullMessage {
 	 * Get harvester ID for the given stub/URL.
 	 * 
 	 * @param message
-	 * @return
+	 * @return - Harvester ID.
 	 */
 	public static String getHarvesterID(String message) {
+		LOGGER.info("**getHarvesterID** - Get the harvester id from the given JSON message.");
 		try {
-
 			JSONObject obj = new JSONObject(message);
 			JSONObject jsonObject = (JSONObject) obj;
 			JSONObject record = (JSONObject) jsonObject.get("record");
@@ -94,65 +162,5 @@ public class RabbitMQPullMessage {
 			ex.printStackTrace();
 		}
 		return "0";
-	}
-
-	/**
-	 * Pull the rabbitMQ messages and parse that JSON message.
-	 * 
-	 * @return
-	 */
-	public static HashMap<String, HashMap<String, ArrayList<ReviewData>>> pull() {
-
-		HashMap<String, HashMap<String, ArrayList<ReviewData>>> actualReviewDataPerStub = new HashMap<String, HashMap<String, ArrayList<ReviewData>>>();
-		Integer count = 0;
-		Connection connection = null;
-		Channel channel = null;
-
-		try {
-			ConnectionFactory factory = new ConnectionFactory();
-			factory.setHost(PropertyHandler.getProperties().getProperty("mqhost"));
-			connection = factory.newConnection();
-			channel = connection.createChannel();
-
-			channel.queueDeclare(QUEUE_NAME, true, false, false, null);
-			QueueingConsumer consumer = new QueueingConsumer(channel);
-			channel.basicConsume(QUEUE_NAME, true, consumer);
-
-			while (true) {
-				count++;
-				if (count < 4) {
-					QueueingConsumer.Delivery delivery = consumer.nextDelivery(50000);
-					if (delivery == null) {
-						continue;
-					}
-					String message = new String(delivery.getBody());
-					System.out.println(" [x] Received ->> " + message);
-					String stubID = getHarvesterID(message);
-					HashMap<String, ArrayList<ReviewData>> actualDataByAuthorID = writeJsonToHashmap(message);
-					actualReviewDataPerStub.put(stubID, actualDataByAuthorID);
-				} else {
-					break;
-				}
-			}
-			System.out.println("++++++++++++++++++++++++out of the loop++++++++++++++++++++++++++++++");
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		} finally {
-			if (channel != null) {
-				try {
-					channel.close();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-			if (connection != null) {
-				try {
-					connection.close();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		return actualReviewDataPerStub;
 	}
 }
