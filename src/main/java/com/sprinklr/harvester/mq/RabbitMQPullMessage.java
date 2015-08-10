@@ -27,6 +27,8 @@ public class RabbitMQPullMessage {
 
 	public static final int MAX_RETRY = 5;
 
+	public static int queue_waittime = 50000; // ms
+
 	/**
 	 * Pull the rabbitMQ messages and parse that JSON message.
 	 * 
@@ -53,7 +55,7 @@ public class RabbitMQPullMessage {
 			while (true) {
 				count++;
 				if (count < MAX_RETRY) {
-					QueueingConsumer.Delivery delivery = consumer.nextDelivery(80000);
+					QueueingConsumer.Delivery delivery = consumer.nextDelivery(queue_waittime * count);
 					if (delivery == null) {
 						continue;
 					}
@@ -140,7 +142,6 @@ public class RabbitMQPullMessage {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 		return reviewContent;
 	}
 

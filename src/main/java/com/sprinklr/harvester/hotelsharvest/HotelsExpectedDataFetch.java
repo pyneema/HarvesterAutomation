@@ -1,4 +1,4 @@
-package com.sprinklr.harvester.ctripharvest;
+package com.sprinklr.harvester.hotelsharvest;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -8,11 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.Select;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
 import com.sprinklr.harvester.model.InitialData;
 import com.sprinklr.harvester.model.ReviewData;
@@ -24,9 +20,9 @@ import com.sprinklr.harvester.util.StaticUtils;
  * Contain functions to fetch the data from the actual site -- Source CTRIP
  *
  */
-public class CtripExpectedDataFetch extends BaseDriverUtils {
+public class HotelsExpectedDataFetch extends BaseDriverUtils {
 
-	public static final Logger LOGGER = Logger.getLogger(CtripExpectedDataFetch.class);
+	public static final Logger LOGGER = Logger.getLogger(HotelsExpectedDataFetch.class);
 	private static final Date GIVENMENTIONDATE = StaticUtils.convertCtripStringToDate(PropertyHandler.getProperties()
 	        .getProperty("date"));
 
@@ -35,7 +31,6 @@ public class CtripExpectedDataFetch extends BaseDriverUtils {
 	        "mentionTime_xpath");
 	private static final String XPATH_AUTHOR = PropertyHandler.getSourceProperties().getProperty("author_xpath");
 	private static final String XPATH_RATING = PropertyHandler.getSourceProperties().getProperty("rating_xpath");
-	private static final String SORT_DROPDOWN = PropertyHandler.getSourceProperties().getProperty("sort_dropdown");
 
 	/**
 	 * Get the expected data based on the browser property defined in
@@ -48,21 +43,22 @@ public class CtripExpectedDataFetch extends BaseDriverUtils {
 	 */
 	public static HashMap<String, HashMap<String, ArrayList<ReviewData>>> getExpectedData(
 	        HashMap<Integer, InitialData> testData) {
-		return getDataFromCtripSites(testData);
+		return getDataFromHotelsSites(testData);
 	}
 
 	/**
-	 * Get the expected data result set from the test site CTRIP.
+	 * Get the expected data result set from the test site Hotels.
 	 * 
 	 * @param testData
 	 *            - Test data hashmap containing the stub id and urls.
 	 * 
 	 * @return - Hashmapped test data for the expected results.
 	 */
-	public static HashMap<String, HashMap<String, ArrayList<ReviewData>>> getDataFromCtripSites(
+	public static HashMap<String, HashMap<String, ArrayList<ReviewData>>> getDataFromHotelsSites(
 	        HashMap<Integer, InitialData> testData) {
-		LOGGER.info("CtripExpectedDataFetch - Inside get actual data method of class CtripExpectedDataFetch...");
+		LOGGER.info("getDataFromHotelsSites - Inside get actual data method of class getDataFromHotelsSites...");
 
+		// WebDriver driver = getDriver();
 		HashMap<String, HashMap<String, ArrayList<ReviewData>>> expectedReviewDataPerStub = new HashMap<String, HashMap<String, ArrayList<ReviewData>>>();
 
 		Set<Integer> endPointKeySet = testData.keySet();
@@ -82,8 +78,6 @@ public class CtripExpectedDataFetch extends BaseDriverUtils {
 
 			openBrowser(endPointURL);
 
-			selectCTripDropdown();
-
 			NEXTSTUB: while (true) {
 				List<WebElement> comments = getElementByXPath(XPATH_CONTENT);
 				List<WebElement> mentionDates = getElementByXPath(XPATH_MENTIONTIME);
@@ -91,10 +85,14 @@ public class CtripExpectedDataFetch extends BaseDriverUtils {
 				List<WebElement> ratings = getElementByXPath(XPATH_RATING);
 
 				for (int i = 0; i < comments.size(); i++) {
-					Date date = StaticUtils.convertCtripStringToDate(mentionDates.get(i).getText());
+					Date date = StaticUtils.convertHotelsStringToDate(mentionDates.get(i).getText());
 					if (date.before(GIVENMENTIONDATE)) {
 						break NEXTSTUB;
 					}
+
+					System.out.println("Commmmmmmm ==> " + comments.get(i).getText());
+					System.out.println("Commmmmmmm ==> " + authorIDs.get(i).getText());
+					System.out.println("Commmmmmmm ==> " + ratings.get(i).getText());
 					commentsText.add(comments.get(i).getText());
 					mentionDatesText.add(StaticUtils.convertDateToString(date));
 					authorIDsText.add(authorIDs.get(i).getText());
@@ -102,21 +100,11 @@ public class CtripExpectedDataFetch extends BaseDriverUtils {
 				}
 
 				try { // move to next page
-					String next_page = "//a[contains(@class,'c_down')]";
-					if (endPointURL.toLowerCase().contains("ajax")) {
-						endPointURL = endPointURL.replaceAll("currentPage=" + pageNumber, "currentPage="
-						        + (pageNumber + 1));
-						LOGGER.info("New endpoint is ==> " + endPointURL);
-						pageNumber++;
-						openBrowser(endPointURL); // load next page.
-						continue;
-					} else {
-						WebElement button = (new WebDriverWait(getDriver(), 200)).until(ExpectedConditions
-						        .presenceOfElementLocated(By.xpath(next_page)));
-						button.click(); // click on next button.
-						StaticUtils.pause(5);
-						continue;
-					}
+					endPointURL = endPointURL.replaceAll("page=" + pageNumber, "page=" + (pageNumber + 1));
+					LOGGER.info("New endpoint is ==> " + endPointURL);
+					pageNumber++;
+					openBrowser(endPointURL); // load next page.
+					continue;
 				} catch (Exception e) {
 					break;
 				}
@@ -149,17 +137,7 @@ public class CtripExpectedDataFetch extends BaseDriverUtils {
 			}
 			expectedReviewDataPerStub.put(stubID.toString(), reviewContent);
 		}
+		closeBrowser();
 		return expectedReviewDataPerStub;
-	}
-
-	/**
-	 * Sort the reviews in latest date order.
-	 */
-	public static void selectCTripDropdown() {
-		WebElement selectDropdown = (new WebDriverWait(getDriver(), 200)).until(ExpectedConditions
-		        .presenceOfElementLocated(By.xpath(SORT_DROPDOWN)));
-		Select dropdown = new Select(selectDropdown);
-		dropdown.selectByIndex(1);
-		StaticUtils.pause(10);
 	}
 }

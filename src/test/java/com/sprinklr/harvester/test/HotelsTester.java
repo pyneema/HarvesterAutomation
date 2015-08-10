@@ -8,14 +8,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.log4j.Logger;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.sprinklr.harvester.adminui.AddStubAdminUI;
-import com.sprinklr.harvester.ctripharvest.CtripExpectedDataFetch;
 import com.sprinklr.harvester.global.CompareFunctions;
+import com.sprinklr.harvester.hotelsharvest.HotelsExpectedDataFetch;
 import com.sprinklr.harvester.model.InitialData;
 import com.sprinklr.harvester.model.ReviewData;
 import com.sprinklr.harvester.mq.RabbitMQFunctions;
@@ -29,9 +28,9 @@ import com.sprinklr.harvester.util.PropertyHandler;
  * Test the CTrip harvester.
  *
  */
-public class CTripTester extends BaseDriverUtils {
+public class HotelsTester extends BaseDriverUtils {
 
-	public static final Logger LOGGER = Logger.getLogger(CTripTester.class);
+	public static final Logger LOGGER = Logger.getLogger(HotelsTester.class);
 
 	/**
 	 * Add all of the stubs that does not exists in DB. Add it through ADMIN UI.
@@ -60,32 +59,27 @@ public class CTripTester extends BaseDriverUtils {
 	 * @param url
 	 * @param canonicalUrl
 	 */
-	@Test(dataProvider = "ctripdata")
-	public void verifyCTripHarvester(String url, String canonicalUrl) {
-		LOGGER.info("verifyCTripHarvester() Call create csv to fetch the stub ids from db.");
+	@Test(dataProvider = "hotelsdata")
+	public void verifyHotelsHarvester(String url, String canonicalUrl) {
+		LOGGER.info("verifyHotelsHarvester() Call create csv to fetch the stub ids from db.");
 		HashMap<Integer, InitialData> testData = JdbcConnect.getHashMappedDBData(url, canonicalUrl);
-		LOGGER.info("verifyCTripHarvester() completed fetching data from database & convert into HashMap<Integer, InitialData> testData ");
+		LOGGER.info("verifyHotelsHarvester() completed fetching data from database & convert into HashMap<Integer, InitialData> testData ");
 
-		LOGGER.info("verifyCTripHarvester() starting to push the stubs in RabbitMQ");
+/*		LOGGER.info("verifyHotelsHarvester() starting to push the stubs in RabbitMQ");
 		RabbitMQPushMessage.push(testData);
-		LOGGER.info("verifyCTripHarvester() completed pushing all the stubUrls to queue from testData");
+		LOGGER.info("verifyHotelsHarvester() completed pushing all the stubUrls to queue from testData");
 
-		LOGGER.info("verifyCTripHarvester() start pulling messages from MQ for provided stubs");
+		LOGGER.info("verifyHotelsHarvester() start pulling messages from MQ for provided stubs");
 		HashMap<String, HashMap<String, ArrayList<ReviewData>>> actualData = RabbitMQPullMessage.pull();
-		LOGGER.info("verifyCTripHarvester() completed pulling messages from MQ for provided stubs");
+		LOGGER.info("verifyHotelsHarvester() completed pulling messages from MQ for provided stubs");*/
 
-		LOGGER.info("verifyCTripHarvester() starting fetching data from actual webpage");
-		HashMap<String, HashMap<String, ArrayList<ReviewData>>> expectedData = CtripExpectedDataFetch
+		LOGGER.info("verifyHotelsHarvester() starting fetching data from actual webpage");
+		HashMap<String, HashMap<String, ArrayList<ReviewData>>> expectedData = HotelsExpectedDataFetch
 		        .getExpectedData(testData);
-		LOGGER.info("verifyCTripHarvester() completed fetching data from actual webpage");
+		LOGGER.info("verifyHotelsHarvester() completed fetching data from actual webpage");
 
-		LOGGER.info("verifyCTripHarvester() starting comparison of expected data with actual data");
-		CompareFunctions.compareData(actualData, expectedData);
-	}
-	
-	@AfterClass
-	public static void closeBrowser() {
-		BaseDriverUtils.closeBrowser();
+		LOGGER.info("verifyHotelsHarvester() starting comparison of expected data with actual data");
+		// CompareFunctions.compareData(actualData, expectedData);
 	}
 
 	/**
@@ -93,8 +87,8 @@ public class CTripTester extends BaseDriverUtils {
 	 * 
 	 * @return - 2 Dimensional array of CSV file.
 	 */
-	@DataProvider(name = "ctripdata")
-	public Object[][] ctripDataTest() {
+	@DataProvider(name = "hotelsdata")
+	public Object[][] HotelsDataTest() {
 		String source = PropertyHandler.getProperties().getProperty("source").toLowerCase();
 		String csvFileToParse = System.getProperty("user.dir") + "\\src\\main\\resources\\" + source + "\\" + source
 		        + ".csv";

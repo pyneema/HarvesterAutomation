@@ -10,7 +10,7 @@ import org.apache.log4j.Logger;
  * General reusable functions.
  */
 public class StaticUtils {
-	
+
 	public static final Logger LOGGER = Logger.getLogger(StaticUtils.class);
 
 	/**
@@ -43,4 +43,25 @@ public class StaticUtils {
 		return givenMentionDate;
 	}
 
+	/**
+	 * Convert Date format as per CTRIP source.
+	 * 
+	 * @param givenDate
+	 * @return
+	 */
+	public static Date convertHotelsStringToDate(String givenDate) {
+		SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MMM dd, yyyy");
+		Date givenMentionDate = null;
+		try {
+			givenMentionDate = simpleDateFormat.parse(givenDate);
+		} catch (ParseException e1) {
+			e1.printStackTrace();
+		}
+		return givenMentionDate;
+	}
+
+	public static String convertDateToString(Date date) {
+		SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		return simpleDateFormat.format(date);
+	}
 }

@@ -56,24 +56,28 @@ public class CompareFunctions {
 					ReviewData reviewData = null;
 					for (ReviewData actualReviewData : actualReviewList) {
 						reviewData = actualReviewData;
-						System.out.println("Expected Review Data AuthorID = " + expectedReviewData.getAuthorId());
+/*						System.out.println("Expected Review Data AuthorID = " + expectedReviewData.getAuthorId());
 						System.out.println("Actual Review Data Author ID = " + actualReviewData.getAuthorId());
 
 						System.out.println("Expected Review Data Mention Date = "
 						        + expectedReviewData.getMentionedDate());
-						System.out.println("Actual Review Data Mention Date = " + actualReviewData.getMentionedDate());
+						System.out.println("Actual Review Data Mention Date = "
+						        + actualReviewData.getMentionedDate().split("T")[0]);
 
 						System.out.println("Expected Review Data Rating = " + expectedReviewData.getRatings());
 						System.out.println("Actual Review Data Rating = " + actualReviewData.getRatings());
 
 						System.out.println("Expected Review Data Comments = " + expectedReviewData.getComment());
-						System.out.println("Actual Review Data Comments = " + actualReviewData.getComment());
+						System.out.println("Actual Review Data Comments = " + actualReviewData.getComment());*/
 
 						if (expectedReviewData.getAuthorId().trim()
 						        .equalsIgnoreCase(actualReviewData.getAuthorId().trim())
 						        && (expectedReviewData.getComment().trim()
 						                .contains(actualReviewData.getComment().trim()) || actualReviewData
-						                .getComment().trim().contains(expectedReviewData.getComment().trim()))) {
+						                .getComment().trim().contains(expectedReviewData.getComment().trim()))
+						        && expectedReviewData.getMentionedDate().equalsIgnoreCase(
+						                actualReviewData.getMentionedDate().split("T")[0])
+						        && expectedReviewData.getRatings().equalsIgnoreCase(actualReviewData.getRatings())) {
 							System.out
 							        .println("===============================================================================");
 							flag = true;
